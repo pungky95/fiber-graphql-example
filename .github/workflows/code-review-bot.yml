@@ -28,7 +28,7 @@ jobs:
         id: get-diff
         run: |
           # Get the diff between the base and head of the pull request
-          diff=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          diff=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>&1) || { echo "::error::$diff"; exit 1; }
           echo "::set-output name=diff::$diff"
 
       - name: Run OpenAI Code Review
