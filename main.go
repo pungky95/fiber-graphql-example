@@ -45,6 +45,7 @@ func main() {
 		var input Input
 		if err := ctx.BodyParser(&input); err != nil {
 			errMsg := fmt.Sprintf("Cannot parse request body: %v", err)
+
 			return ctx.Status(fiber.StatusInternalServerError).SendString(errMsg)
 		}
 		result := graphql.Do(graphql.Params{
@@ -54,6 +55,7 @@ func main() {
 			VariableValues: input.Variables,
 		})
 		ctx.Set("Content-Type", "application/graphql-response+json")
+
 		return ctx.JSON(result)
 	}
 
