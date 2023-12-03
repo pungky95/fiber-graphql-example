@@ -22,8 +22,16 @@ func main() {
 			},
 		},
 	}
-	rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
-	schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
+
+	rootQuery := graphql.ObjectConfig{
+		Name:   "RootQuery",
+		Fields: fields,
+	}
+
+	schemaConfig := graphql.SchemaConfig{
+		Query: graphql.NewObject(rootQuery),
+	}
+
 	schema, err := graphql.NewSchema(schemaConfig)
 	if err != nil {
 		log.Fatalf("failed to create new schema, error: %v", err)
@@ -31,12 +39,10 @@ func main() {
 
 	app := fiber.New()
 
-	// curl 'http://localhost:9090/?query=query%7Bhello%7D'
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		var input Input
 		if err := ctx.QueryParser(&input); err != nil {
-			return ctx.
-				Status(fiber.StatusInternalServerError).
+			return ctx.Status(fiber.StatusInternalServerError).
 				SendString("Cannot parse query parameters: " + err.Error())
 		}
 
@@ -51,12 +57,10 @@ func main() {
 		return ctx.JSON(result)
 	})
 
-	// curl 'http://localhost:9090/' --header 'content-type: application/json' --data-raw '{"query":"query{hello}"}'
 	app.Post("/", func(ctx *fiber.Ctx) error {
 		var input Input
 		if err := ctx.BodyParser(&input); err != nil {
-			return ctx.
-				Status(fiber.StatusInternalServerError).
+			return ctx.Status(fiber.StatusInternalServerError).
 				SendString("Cannot parse body: " + err.Error())
 		}
 
