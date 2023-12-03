@@ -1,44 +1,27 @@
-name: Code Review with ChatGPT
+name: Code Review Bot
 
 on:
   pull_request:
     types:
       - opened
       - synchronize
-
+permissions: write-all
 jobs:
-  code-review:
+  review:
     runs-on: ubuntu-latest
-
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_MODEL: "gpt-3.5-turbo-16k" # Optional: defaults to "gpt-4"
+      exclude: "**/*.json, **/*.md, go.mod, go.sum" # Optional: exclude patterns separated by commas
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: AI Code Reviewer
+        uses: freeedcom/ai-codereviewer@main
         with:
-          python-version: 3.8
-
-      - name: Install Dependencies
-        run: |
-          pip install openai
-
-      - name: Generate Code Review Comments
-        run: |
-          # Fetch the pull request diff
-          PR_DIFF=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }})
-
-          # Loop through each file in the diff and generate comments
-          for file in $PR_DIFF; do
-            # Fetch the file content
-            FILE_CONTENT=$(cat $file)
-
-            # Generate comment using OpenAI API
-            COMMENT=$(curl -X POST -H "Content-Type: application/json" \
-              -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-              -d '{"prompt": "Review the following code:\n'"$FILE_CONTENT"'", "temperature": 0.7}' \
-              https://api.openai.com/v1/engines/davinci-codex/completions)
-
-            # Add comment to the pull request
-            gh pr review --body "$COMMENT" --comment "$COMMENT_ID" --approve
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_MODEL: "gpt-3.5-turbo-16k"
+          exclude: "**/*.json, **/*.md"
