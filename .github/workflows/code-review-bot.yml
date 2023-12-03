@@ -1,4 +1,4 @@
-name: OpenAI Code Review
+name: Code Review with ChatGPT
 
 on:
   pull_request:
@@ -7,39 +7,38 @@ on:
       - synchronize
 
 jobs:
-  code_review:
+  code-review:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install openai
 
-      - name: Get Diff
-        id: get-diff
+      - name: Generate Code Review Comments
         run: |
-          # Get the diff between the base and head of the pull request
-          echo "::set-output name=diff::$(git diff --name-only ${{ github.event.pull_request.head.sha }})"
+          # Fetch the pull request diff
+          PR_DIFF=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }})
 
-      - name: Run OpenAI Code Review
-        id: run-openai-review
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          python .github/scripts/openai_code_review.py "${{ steps.get-diff.outputs.diff }}"
+          # Loop through each file in the diff and generate comments
+          for file in $PR_DIFF; do
+            # Fetch the file content
+            FILE_CONTENT=$(cat $file)
 
-      - name: Comment on Diff
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.number }}
-          body: ${{ steps.run-openai-review.outputs.review_comments }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+            # Generate comment using OpenAI API
+            COMMENT=$(curl -X POST -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+              -d '{"prompt": "Review the following code:\n'"$FILE_CONTENT"'", "temperature": 0.7}' \
+              https://api.openai.com/v1/engines/davinci-codex/completions)
+
+            # Add comment to the pull request
+            gh pr review --body "$COMMENT" --comment "$COMMENT_ID" --approve
+          done
