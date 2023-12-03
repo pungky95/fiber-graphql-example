@@ -1,0 +1,41 @@
+name: Clean up Pull Request if closed
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE: journal-api-${{ github.event.number }}
+  REGION: 'asia-southeast1'
+  GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - staging
+
+jobs:
+  destroy:
+    if: github.event.action == 'closed'
+    name: Remove Instance Cloud Run
+    runs-on: ubuntu-latest
+    container: google/cloud-sdk:357.0.0-slim
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - id: 'auth'
+        name: Google Auth
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v1'
+
+      - name: Destroy Instance from Cloud Run
+        run: |
+          gcloud run services delete ${{ env.SERVICE }} \
+          --platform managed \
+          --project ${{ env.PROJECT_ID }} \
+          --region ${{ env.REGION }} \
+          --quiet
