@@ -18,7 +18,7 @@ func main() {
 		"hello": &graphql.Field{
 			Type: graphql.String,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return "world", nil
+				return "tokyo", nil
 			},
 		},
 	}
