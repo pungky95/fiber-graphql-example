@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,53 +14,62 @@ type Input struct {
 }
 
 func main() {
-	// Create GraphQL fields
 	fields := graphql.Fields{
 		"hello": &graphql.Field{
 			Type: graphql.String,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return "tokyo", nil
+				return "world", nil
 			},
 		},
 	}
-
-	// Create RootQuery object config
 	rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
-
-	// Create schema config with RootQuery
 	schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
-
-	// Create schema
 	schema, err := graphql.NewSchema(schemaConfig)
 	if err != nil {
 		log.Fatalf("failed to create new schema, error: %v", err)
 	}
 
-	// Create Fiber app
 	app := fiber.New()
 
-	// Handler function for GraphQL requests
-	graphqlHandler := func(ctx *fiber.Ctx) error {
+	// curl 'http://localhost:9090/?query=query%7Bhello%7D'
+	app.Get("/", func(ctx *fiber.Ctx) error {
 		var input Input
-		if err := ctx.BodyParser(&input); err != nil {
-			errMsg := fmt.Sprintf("Cannot parse request body: %v", err)
-			return ctx.Status(fiber.StatusInternalServerError).SendString(errMsg)
+		if err := ctx.QueryParser(&input); err != nil {
+			return ctx.
+				Status(fiber.StatusInternalServerError).
+				SendString("Cannot parse query parameters: " + err.Error())
 		}
+
 		result := graphql.Do(graphql.Params{
 			Schema:         schema,
 			RequestString:  input.Query,
 			OperationName:  input.OperationName,
 			VariableValues: input.Variables,
 		})
+
 		ctx.Set("Content-Type", "application/graphql-response+json")
 		return ctx.JSON(result)
-	}
+	})
 
-	// Handle GET requests
-	app.Get("/", graphqlHandler)
+	// curl 'http://localhost:9090/' --header 'content-type: application/json' --data-raw '{"query":"query{hello}"}'
+	app.Post("/", func(ctx *fiber.Ctx) error {
+		var input Input
+		if err := ctx.BodyParser(&input); err != nil {
+			return ctx.
+				Status(fiber.StatusInternalServerError).
+				SendString("Cannot parse body: " + err.Error())
+		}
 
-	// Handle POST requests
-	app.Post("/", graphqlHandler)
+		result := graphql.Do(graphql.Params{
+			Schema:         schema,
+			RequestString:  input.Query,
+			OperationName:  input.OperationName,
+			VariableValues: input.Variables,
+		})
 
-	log.Fatal(app.Listen(":8080"))
+		ctx.Set("Content-Type", "application/graphql-response+json")
+		return ctx.JSON(result)
+	})
+
+	log.Fatal(app.Listen(":9090"))
 }
